@@ -32,3 +32,22 @@ jobs:
 
       - name: Test (pytest)
         run: pytest
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image (pinned deps + baked model)
+        run: docker build -t pdm-mlops:ci .
+
+      - name: Smoke-test API container
+        run: |
+          docker run -d --name pdm-api -p 8000:8000 pdm-mlops:ci \
+            uvicorn pdm.serving.api:app --host 0.0.0.0 --port 8000
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/health || true)
+            [ "$code" = "200" ] && break || sleep 2
+          done
+          curl -sf http://localhost:8000/health | grep -q '"model_available":true'
+          docker rm -f pdm-api

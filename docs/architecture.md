@@ -148,8 +148,10 @@ python scripts/run_pipeline.py   # 또는: pdm-run
 streamlit run app.py             # http://localhost:8501
 ```
 
-검증 기대값(리팩터링 전후 동일): **t*=6700(PSI 0.201), 드리프트 구간 운영 recall 90.4% /
-미재학습 78.8%, acc 95.9% / 92.1%**.
+참조 환경(macOS, scikit-learn 1.8.0) 실측: **t*=6700(PSI 0.201), 드리프트 구간 운영 recall
+90.4% / 미재학습 78.8%, acc 95.9% / 92.1%**. t*·PSI 는 환경에 안정적이나, RandomForest
+지표는 OS/CPU·라이브러리 버전에 따라 ±0.5%p 미세 변동이 있다(Linux 컨테이너 ≈ 90.2%).
+Docker(`requirements-lock.txt`)는 버전을 고정해 컨테이너 간 동일 값을 보장한다.
 
 ---
 
@@ -172,8 +174,9 @@ streamlit run app.py             # http://localhost:8501
 
 | 보강 | 위치 | 핵심 |
 |---|---|---|
-| **테스트** | [`tests/`](../tests) | 각 레이어 단위 계약 + **회귀 테스트**(문서 불변값 고정: t*=6700, recall 90.4/78.8, acc 95.9/92.1). `run_simulation(persist=False)`·tmp 경로로 실제 산출물 미오염 |
-| **CI** | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | push/PR마다 `ruff check` + `pytest` (Python 3.10/3.11) |
+| **테스트** | [`tests/`](../tests) | 각 레이어 단위 계약 + **회귀 테스트**(버전-강건 불변식: t*=6700, v2 승격, 재학습>미재학습, recall/acc 하한). `run_simulation(persist=False)`·tmp 경로로 실제 산출물 미오염 |
+| **CI** | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | push/PR마다 `ruff check` + `pytest` (Python 3.10/3.11) + Docker 빌드·헬스체크 |
+| **컨테이너** | [`Dockerfile`](../Dockerfile) · [`docker-compose.yml`](../docker-compose.yml) | 핀 고정 의존성([`requirements-lock.txt`](../requirements-lock.txt)) + 빌드 시 모델 내장. `docker compose up` 으로 대시보드(8501)+API(8000) 동시 기동, 컨테이너 간 동일 수치 보장 |
 | **온라인 서빙** | [`pdm/serving/api.py`](../src/pdm/serving/api.py) | FastAPI `/predict`(단건·배치) — 레지스트리 모델 로드, **학습과 동일한 `make_features` 재사용**, 응답에 클래스별 확률 + SPC OOC 플래그. `GET /models`로 버전 조회. `pdm-serve` 로 기동 |
 | **실험 추적** | [`pdm/tracking/mlflow_logger.py`](../src/pdm/tracking/mlflow_logger.py) | `log_run`이 params·metrics·artifacts·모델을 한 MLflow run으로 기록. CLI(`pdm-run`/`run_pipeline`) 끝에서 가드 호출. 추적 백엔드 미지정 시 repo 내 sqlite로 자동 대체, 실패해도 파이프라인 무중단 |
 

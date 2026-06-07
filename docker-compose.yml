@@ -1,0 +1,20 @@
+# 대시보드 + 추론 API 를 한 번에 실행.
+#   docker compose up --build
+#   → 대시보드 http://localhost:8501  ·  추론 API http://localhost:8000/docs
+# 두 서비스는 동일 이미지(pdm-mlops:latest)를 공유한다(빌드 1회).
+services:
+  dashboard:
+    build: .
+    image: pdm-mlops:latest
+    ports:
+      - "8501:8501"
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+
+  api:
+    image: pdm-mlops:latest
+    build: .
+    ports:
+      - "8000:8000"
+    command: uvicorn pdm.serving.api:app --host 0.0.0.0 --port 8000
+    depends_on:
+      - dashboard

@@ -1,0 +1,26 @@
+# 재현성 핀 — Docker 이미지에서 정확 수치(t*=6700, recall 90.4%, acc 95.9%)를 그대로
+# 재현하기 위한 고정 버전. 특히 과학 연산 스택(numpy/scipy/scikit-learn/pandas)이
+# RandomForest 결과를 좌우하므로 정확히 고정한다(참조 환경: scikit-learn 1.8.0).
+#
+# 갱신 시: 메인 환경에서 검증 후 버전을 올리고 docs의 수치도 함께 갱신할 것.
+
+# ── 과학 연산 스택 (정확 수치 재현의 핵심) ──
+numpy==2.4.6
+scipy==1.17.1
+scikit-learn==1.8.0
+pandas==2.3.3
+joblib==1.5.3
+
+# ── 대시보드 (Streamlit) ──
+streamlit==1.58.0
+plotly==6.7.0
+altair==6.1.0
+
+# ── 실시간 추론 API (FastAPI) ──
+fastapi==0.136.3
+uvicorn==0.48.0
+pydantic==2.13.4
+starlette==1.2.1
+
+# ── 실험 추적 (MLflow) ──
+mlflow==3.13.0

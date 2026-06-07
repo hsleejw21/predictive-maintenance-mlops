@@ -25,7 +25,9 @@ UCI **AI4I 2020 Predictive Maintenance** 데이터로,
 | `scripts/run_pipeline.py` | **CLI** — 시뮬레이션 실행 + 모델 영속화 + 진단 요약(streamlit 불필요) |
 | `pipeline.py` | 하위호환 파사드(`from pdm import *`) — 기존 `import pipeline` 코드용 |
 | `tests/` | **pytest 스위트** — 물리규칙·피처·모니터링·자동화·레지스트리·API + 회귀(불변값) |
-| `.github/workflows/ci.yml` | **CI** — push/PR마다 ruff 린트 + pytest (Python 3.10/3.11) |
+| `.github/workflows/ci.yml` | **CI** — push/PR마다 ruff 린트 + pytest + Docker 빌드 (Python 3.10/3.11) |
+| `Dockerfile` · `docker-compose.yml` | **컨테이너** — 핀 고정 의존성 + 모델 내장, `docker compose up` 으로 대시보드+API |
+| `requirements-lock.txt` | Docker용 핀 고정 의존성(정확 수치 재현) |
 | `models/` | 모델 레지스트리 산출물 — **생성물(.gitignore 처리)**, `python scripts/run_pipeline.py` 로 생성 |
 | `data/ai4i2020.csv` | 데이터셋 (10,000건 · 5센서 · 5고장모드) |
 | `docs/architecture.md` | **아키텍처·모듈 참고자료** |
@@ -35,6 +37,23 @@ UCI **AI4I 2020 Predictive Maintenance** 데이터로,
 ---
 
 ## 실행 방법
+
+### 가장 간단한 길 — Docker (권장)
+
+파이썬·가상환경 설치 없이 **한 줄로 대시보드 + 추론 API**를 띄웁니다. 의존성이 핀 고정돼
+있고 모델이 이미지에 미리 구워져, 어느 PC에서 돌려도 **동일한 결과**가 재현됩니다.
+
+```bash
+docker compose up --build
+#  → 대시보드   http://localhost:8501
+#  → 추론 API   http://localhost:8000/docs
+```
+
+> 재현성 메모: 동일 버전이라도 OS/CPU의 BLAS·부동소수점 차이로 RandomForest 지표가
+> ±0.5%p 수준에서 미세하게 달라질 수 있습니다(예: macOS 90.4% ↔ Linux 컨테이너 90.2%).
+> Docker는 **버전을 고정**해 컨테이너 사용자끼리 같은 값을 보장합니다.
+
+### 직접 설치 (pip)
 
 ```bash
 # 1) (최초 1회) 가상환경 + 패키지 설치
@@ -115,3 +134,7 @@ python presentation/capture.py      # → presentation/shots/*.png
 | 정확도 | 92.1 % | **95.9 %** |
 
 → 베어링 마모로 토크가 상승(+16Nm)하자 SPC·PSI가 드리프트를 감지하고 자동 재학습이 성능을 회복시킴.
+
+> 위 수치는 참조 환경(macOS, scikit-learn 1.8.0) 실측이며, OS/CPU·라이브러리 버전에 따라
+> ±0.5%p 미세 변동이 있을 수 있습니다(Linux 컨테이너 ≈ 90.2%). 핵심 명제(자동 재학습이
+> 미재학습보다 우수·회복)는 환경과 무관하게 회귀 테스트로 검증됩니다.
