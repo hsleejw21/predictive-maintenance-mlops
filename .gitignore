@@ -1,0 +1,39 @@
+# ── Python ────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ── 가상환경 ──────────────────────────────────────────────
+.venv/
+venv/
+env/
+.env
+
+# ── 모델 레지스트리 산출물 (run_pipeline 으로 언제든 재생성) ──
+# joblib 모델 + 학습시점이 매번 바뀌는 메타데이터 → 커밋하지 않음
+models/
+
+# ── MLflow 실험 추적 로컬 산출물 ──────────────────────────
+mlflow.db
+mlruns/
+mlartifacts/
+
+# ── 테스트 / 린트 / 커버리지 캐시 ─────────────────────────
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ── 발표 자료 ─────────────────────────────────────────────
+# PPTX 는 build_ppt.py 로 재생성 → 제외. 스크린샷(shots/*.png)은 팀 활용 위해 포함.
+presentation/*.pptx
+
+# ── OS / 에디터 ───────────────────────────────────────────
+.DS_Store
+.ipynb_checkpoints/
+.vscode/
+.idea/

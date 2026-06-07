@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdm-mlops"
+version = "1.0.0"
+description = "설비 고장 모드 분류 + SPC 이중 레이어 MLOps (UCI AI4I 2020)"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scikit-learn>=1.3",
+    "joblib>=1.3",
+]
+
+[project.optional-dependencies]
+# 대시보드 실행용 (streamlit run app.py)
+dashboard = ["streamlit>=1.30", "plotly>=5.9"]
+# 실시간 추론 REST API (pdm-serve / uvicorn pdm.serving.api:app)
+serving = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2"]
+# 실험 추적 (MLflow)
+tracking = ["mlflow>=2.10"]
+# 발표 자료/스크린샷 재생성용
+slides = ["python-pptx>=0.6", "playwright>=1.40"]
+# 테스트 + 린트 (CI)
+dev = ["pytest>=8", "ruff>=0.4", "httpx>=0.27"]
+
+[project.scripts]
+pdm-run = "pdm.serving.simulation:_cli"
+pdm-serve = "pdm.serving.api:_cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning", "ignore::UserWarning"]
+
+[tool.ruff]
+src = ["src"]
+line-length = 100
+target-version = "py310"
+# presentation/ 은 슬라이드 생성용 스크립트(조밀한 한 줄 스타일 의도적) → 린트 제외
+extend-exclude = ["presentation"]
+
+[tool.ruff.lint]
+# E/F/I = pycodestyle 오류 + pyflakes + import 정렬
+select = ["E", "F", "I"]
+# 대시보드/시각화 코드는 컴팩트한 한 줄 if·세미콜론 스타일을 의도적으로 사용
+ignore = ["E501", "E701", "E702"]

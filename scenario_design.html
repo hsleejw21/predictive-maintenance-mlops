@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>설비 고장 모드 분류 + SPC 이중 레이어 MLOps — 시나리오 설계 (입문자용)</title>
+<style>
+  :root{
+    --bg:#fafaf7; --tx:#1f2937; --mut:#6b7280;
+    --ac:#2563eb; --acs:#dbeafe; --pp:#7c3aed; --pps:#ede9fe;
+    --wn:#d97706; --wns:#fef3c7; --gd:#059669; --gds:#d1fae5;
+    --bd:#dc2626; --bds:#fee2e2; --cd:#fff; --br:#e5e7eb; --sf:#f3f4f6;
+    --ez:#0e7490; --ezs:#ecfeff;
+  }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+    background:var(--bg);color:var(--tx);max-width:1080px;margin:0 auto;padding:40px 28px 80px;
+    line-height:1.8;font-size:15.5px;word-break:keep-all;overflow-wrap:break-word}
+  h1{font-size:31px;margin:0 0 6px;letter-spacing:-.5px;line-height:1.3}
+  h1 .sub{display:block;font-size:15px;font-weight:400;color:var(--mut);margin-top:8px;line-height:1.5}
+  h2{font-size:25px;margin:58px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--tx)}
+  h3{font-size:19px;margin:30px 0 10px;color:var(--ac)}
+  h4{font-size:16px;margin:18px 0 8px}
+  p{margin:10px 0} ul,ol{padding-left:20px} li{margin:6px 0}
+  code{background:var(--sf);padding:2px 6px;border-radius:4px;font-size:13.5px;font-family:ui-monospace,monospace}
+  .lead{font-size:16px;background:var(--acs);padding:18px 22px;border-radius:10px;border-left:4px solid var(--ac)}
+  .pill{display:inline-block;font-size:12px;padding:3px 10px;border-radius:999px;background:var(--sf);color:var(--mut);margin-right:6px}
+  .pill.ac{background:var(--acs);color:var(--ac)} .pill.wn{background:var(--wns);color:var(--wn)} .pill.gd{background:var(--gds);color:var(--gd)}
+  .toc{background:var(--cd);border:1px solid var(--br);border-radius:10px;padding:16px 22px;margin:20px 0}
+  .toc ol{margin:6px 0 0}
+
+  /* 입문자 친절 박스 */
+  .easy{background:var(--ezs);border:1px solid #a5f3fc;border-left:5px solid var(--ez);
+    border-radius:10px;padding:14px 18px;margin:14px 0}
+  .easy .et{font-weight:700;color:var(--ez);margin-bottom:6px;font-size:14.5px}
+  .easy .et::before{content:"🔰 쉽게 말하면  ·  "}
+  .analogy{background:#fff7ed;border-radius:8px;padding:10px 14px;margin:10px 0;font-size:14px;color:#92400e}
+  .analogy b{color:#7c2d12}
+
+  .tier{background:var(--cd);border:1px solid var(--br);border-radius:10px;padding:18px 22px;margin:14px 0}
+  .tier.p{border-left:6px solid var(--bd)} .tier.s{border-left:6px solid var(--ac)} .tier.v{border-left:6px solid var(--gd)}
+  .tier h3{margin-top:0}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{border:1px solid var(--br);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--sf);font-weight:600}
+  td.bad{color:var(--bd)} td.good{color:var(--gd);font-weight:600}
+
+  .arch{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:24px;margin:18px 0;font-size:13.5px;line-height:1.5}
+  .arch .box{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 16px;margin:8px 0}
+  .arch .l1{border-left:4px solid #f59e0b} .arch .l2{border-left:4px solid #a78bfa}
+  .arch .mon{border-left:4px solid #ef4444} .arch .auto{border-left:4px solid #34d399}
+  .arch b{color:#fff} .arch .tag{font-size:11px;color:#94a3b8}
+  .arch .arrow{text-align:center;color:#64748b;margin:2px 0}
+
+  .matrix{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:14px 0}
+  .cell{border:1px solid var(--br);border-radius:8px;padding:14px 16px;font-size:14px}
+  .cell.ok{background:var(--gds);border-color:#6ee7b7}
+  .cell.diag{background:var(--acs);border-color:#93c5fd}
+  .cell.alert{background:var(--wns);border-color:#fcd34d}
+  .cell.miss{background:var(--bds);border-color:#fca5a5}
+  .cell .ct{font-weight:700;margin-bottom:4px}
+
+  .layers{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0}
+  .layer{background:#f9fafb;border:1px solid var(--br);border-radius:8px;padding:11px 14px;font-size:14px}
+  .layer b{color:var(--ac);margin-right:8px}
+
+  .loop{background:var(--pps);border-left:4px solid var(--pp);border-radius:8px;padding:14px 18px;margin:16px 0;font-size:14px;color:#5b21b6}
+  .cf{background:var(--bds);border-left:4px solid var(--bd);border-radius:8px;padding:14px 18px;margin:16px 0}
+  .cf h4{color:#991b1b;margin:0 0 8px} .cf li{color:#7f1d1d;font-size:14px}
+  .note{background:var(--wns);border-radius:8px;padding:12px 16px;margin:12px 0;font-size:14px;color:#713f12}
+  .footer{margin-top:60px;color:var(--mut);font-size:13px;text-align:center}
+  em.t{color:#92400e;background:#fff7ed;padding:1px 6px;border-radius:4px;font-style:normal;font-size:13.5px;white-space:nowrap}
+  .big-q{font-size:17px;font-weight:700;color:var(--tx);margin:18px 0 4px}
+</style>
+</head>
+<body>
+
+<h1>설비 고장 모드 분류 + SPC 관리도 이중 레이어 MLOps 시스템
+  <span class="sub">UCI AI4I 2020 데이터셋 기반 · 시나리오 설계 (문제정의 → MLOps 해결 → 기대효과) · <b>도메인 지식이 전혀 없어도 읽을 수 있게 쓴 버전</b></span>
+</h1>
+
+<div class="lead">
+  <b>이 문서는 이렇게 읽으세요</b><br>
+  제조·머신러닝·통계 배경지식이 <b>전혀 없어도</b> 따라올 수 있게 썼습니다.
+  먼저 <b>0장(5분 사전지식)</b>으로 기본 단어들을 익히고, 1장부터 순서대로 읽으면 됩니다.
+  파란 <span style="color:var(--ez);font-weight:700">🔰 쉽게 말하면</span> 박스는 어려운 개념을 일상 비유로 풀어둔 것이라 여기만 읽어도 큰 그림이 잡힙니다.
+</div>
+
+<div class="toc">
+  <b>목차</b>
+  <ol>
+    <li><b>5분 사전지식</b> — 이 문서에 나오는 기본 단어들</li>
+    <li>문제 정의 — 현장은 무엇 때문에 힘든가</li>
+    <li>왜 MLOps인가 — 한 번 만든 모델이 늙는다는 것</li>
+    <li>해결: 이중 레이어 아키텍처</li>
+    <li>Layer 1 — SPC 관리도 (Shewhart 3σ)</li>
+    <li>Layer 2 — Random Forest 다중분류</li>
+    <li>이중 레이어의 핵심 — 두 레이어가 서로 검증</li>
+    <li>MLOps 전체 루프 (5개 레이어)</li>
+    <li>데이터셋 & 드리프트 시나리오</li>
+    <li>기대 효과</li>
+  </ol>
+</div>
+
+<!-- 0 -->
+<h2>0. 5분 사전지식</h2>
+<p>본론에 들어가기 전에, 이 문서에 계속 나오는 4가지 기본 개념만 먼저 잡고 가겠습니다.</p>
+
+<h3>① 설비 모니터링과 5개 센서</h3>
+<p>공장의 기계(설비)에 <b>센서</b>를 붙여서 온도·속도·힘 같은 값을 <b>1초 단위로 계속 측정</b>하는 것을 설비 모니터링이라고 합니다.</p>
+<div class="easy">
+  <div class="et">설비 모니터링 = 기계의 건강검진을 24시간 계속하는 것</div>
+  사람 몸에 체온계·혈압계·심박계를 달아두고 계속 보는 것과 똑같습니다. 숫자가 평소와 달라지면 "어딘가 이상하다"는 신호죠. 기계도 마찬가지입니다.
+</div>
+<p>이 프로젝트에서 쓰는 5개 센서는 다음과 같습니다 (전부 회전·절삭 기계, 예: 밀링머신에서 나오는 값):</p>
+<table>
+  <tr><th>센서</th><th>무엇을 재나</th><th>쉽게 말하면</th></tr>
+  <tr><td><em class="t">공기 온도</em></td><td>설비 주변 공기의 온도(K, 켈빈)</td><td>작업장이 더운지 추운지</td></tr>
+  <tr><td><em class="t">공정 온도</em></td><td>실제 가공이 일어나는 부위의 온도</td><td>보통 공기보다 약 10도 높음. 너무 안 식으면 위험</td></tr>
+  <tr><td><em class="t">회전 속도</em></td><td>모터가 도는 빠르기 (rpm)</td><td>드릴이 얼마나 빨리 도는가</td></tr>
+  <tr><td><em class="t">토크</em></td><td>모터가 내는 회전하는 힘 (Nm)</td><td>일이 힘들수록(부하가 클수록) 토크가 올라감</td></tr>
+  <tr><td><em class="t">공구 마모</em></td><td>절삭 공구가 닳은 정도 (분)</td><td>오래 쓸수록 계속 커지는 값. 칼날이 무뎌진 정도</td></tr>
+</table>
+
+<h3>② 머신러닝 "분류"란?</h3>
+<p>데이터를 보고 자동으로 "이건 A다 / B다"를 맞히는 것을 <b>분류(classification)</b>라고 합니다.</p>
+<div class="easy">
+  <div class="et">분류 = 자동 판정기</div>
+  스팸 메일함을 떠올리세요. 메일 내용을 보고 "스팸이다 / 아니다"를 자동으로 나눠주죠. 그게 분류입니다.
+  이 프로젝트에서는 센서 값을 보고 <b>"정상이다 / 5가지 고장 중 무엇이다"</b>를 맞힙니다. 답의 후보가 2개보다 많으므로 <b>다중분류</b>라고 부릅니다.
+</div>
+
+<h3>③ MLOps란?</h3>
+<p>모델(자동 판정기)을 <b>한 번 만들고 끝내는 게 아니라</b>, 현장에 붙여 돌리고(배포) → 잘 작동하는지 감시하고 → 성능이 떨어지면 자동으로 다시 학습시키는, 이 모든 운영을 자동화한 체계가 <b>MLOps</b>입니다.</p>
+<div class="easy">
+  <div class="et">MLOps = 백신 프로그램의 자동 업데이트 같은 것</div>
+  백신을 한 번 깔았다고 끝이 아니죠. 새 바이러스가 나오면 알아서 업데이트됩니다. MLOps도 똑같이, 현실 데이터가 바뀌면 모델을 알아서 최신 상태로 유지합니다.
+</div>
+
+<h3>④ 이 프로젝트의 한 문장 요약</h3>
+<div class="lead">
+  설비 센서 5개를 보고, <b>① 빠른 감시기(SPC)로 "뭔가 이상함"을 즉시 잡고</b>,
+  <b>② 똑똑한 판정기(Random Forest)로 "무슨 고장인지" 진단</b>하며,
+  두 감시기가 서로를 견제해 <b>시간이 지나도 정확도가 떨어지지 않게 자동으로 다시 학습</b>하는 시스템.
+</div>
+
+<!-- 1 -->
+<h2>1. 문제 정의</h2>
+<div class="tier p">
+  <span class="pill ac">제조 / 예지보전</span>
+  <span class="pill">5개 센서</span>
+  <span class="pill wn">시간이 지나면 패턴이 바뀌는 환경</span>
+
+  <h4>Scene — 어디서 벌어지는 일인가</h4>
+  <p>회전·절삭 설비(밀링머신 등)가 24시간 돌아갑니다. 앞에서 본 5개 센서가 가동 내내 값을 쏟아냅니다.
+  설비가 고장 나서 갑자기 멈추면(=비계획 다운타임) 생산이 끊기고 큰 비용이 발생하므로, <b>고장을 미리 알아채는 것</b>이 목표입니다. 이런 분야를 <em class="t">예지보전(Predictive Maintenance)</em>이라고 합니다.</p>
+  <div class="easy">
+    <div class="et">예지보전 = "고장 나기 전에 미리 손쓰기"</div>
+    자동차를 생각하면, 엔진오일 경고등이 뜨기 전에 "슬슬 갈 때가 됐네" 하고 미리 교체하는 것. 고장이 터진 뒤 수습하는 것보다 훨씬 싸고 안전합니다.
+  </div>
+
+  <h4>Pain — 지금은 무엇이 힘든가 (4가지)</h4>
+  <p><b>1) 단순 임계값 알람의 한계</b></p>
+  <p>지금은 보통 "토크가 50 넘으면 경보" 같은 <b>고정된 기준값(임계값)</b> 규칙을 씁니다. 그런데 이 방식은 두 가지로 실패합니다 — 기준을 빡빡하게 잡으면 멀쩡한데도 경보가 울리고(오탐), 느슨하게 잡으면 여러 원인이 살짝씩 겹친 <b>복합 고장</b>을 놓칩니다.</p>
+  <div class="analogy"><b>비유</b> — 체온 37.5도만 보고 건강을 판단하는 것과 같습니다. 실제로는 체온은 정상인데 혈압·맥박이 같이 미묘하게 이상한 경우를 놓치죠.</div>
+
+  <p><b>2) 원인을 모른다</b></p>
+  <p>임계값 경보는 "이상하다"까지만 알려줍니다. 그게 <b>공구가 닳아서인지, 열이 안 빠져서인지, 전력 문제인지</b>는 알려주지 않습니다. 그래서 정비팀이 매번 설비를 뜯어 직접 확인해야 하고, 그동안 설비는 멈춰 있습니다.</p>
+
+  <p><b>3) 모델이 시간이 지나면 늙는다 (드리프트)</b></p>
+  <p>설비는 쓸수록 부품이 닳고, 부품을 교체하면 특성이 바뀌고, 계절에 따라 작업장 온도도 변합니다. 즉 <b>"정상"의 모습 자체가 서서히 변합니다.</b> 그런데 과거 데이터로 한 번 만든 모델은 옛날 "정상"만 알고 있어서, 시간이 지나면 점점 틀립니다. 이 현상을 <em class="t">드리프트(drift)</em>라고 합니다.</p>
+  <div class="easy">
+    <div class="et">드리프트 = 단골 입맛이 바뀌었는데 옛 레시피만 고수하는 식당</div>
+    손님 입맛이 해마다 조금씩 변하는데 메뉴를 안 바꾸면 점점 손님이 떨어지죠. 모델도 현실이 바뀌는데 옛 패턴만 고집하면 점점 틀립니다. <b>이 문제를 푸는 게 MLOps의 핵심</b>입니다.
+  </div>
+
+  <p><b>4) 정답(라벨)이 늦게 온다</b></p>
+  <p>"이 고장은 사실 과부하 때문이었다"는 진짜 원인은 정비를 다 마쳐야 확정됩니다. 즉 모델을 가르칠 <b>정답표(라벨)가 실시간으로 들어오지 않고 며칠 늦게</b> 도착합니다.</p>
+
+  <h4>KPI — 무엇을 개선하고 싶은가</h4>
+  <table>
+    <tr><th>지표</th><th>방향</th><th>왜 중요한가</th></tr>
+    <tr><td>비계획 다운타임</td><td>↓</td><td>예상 못 한 설비 정지 = 생산 손실 + 긴급 정비비</td></tr>
+    <tr><td>고장 원인 진단 시간</td><td>↓</td><td>원인을 빨리 알면 정비 준비가 빨라짐</td></tr>
+    <tr><td>오탐(정상인데 경보) 수</td><td>↓</td><td>헛경보가 많으면 현장이 경보를 무시하게 됨</td></tr>
+    <tr><td>모델 유지보수 공수</td><td>↓</td><td>사람이 매번 모델을 손보지 않아도 되게</td></tr>
+  </table>
+</div>
+
+<!-- 2 -->
+<h2>2. 왜 MLOps인가 — 한 번 만든 모델이 늙는다는 것</h2>
+<p>위 Pain의 3번(드리프트)이 핵심입니다. 모델은 <b>배포되는 순간부터 늙기 시작</b>하기 때문에, "만들고 끝"이 아니라 "계속 돌보는" 체계가 필요합니다.</p>
+<div class="easy">
+  <div class="et">일반 ML은 "한 번 만들고 방치", MLOps는 "계속 돌봄"</div>
+  일반적인 머신러닝 프로젝트의 흔한 비극: ① 6개월 들여 정확도 95% 모델 완성 → ② 현장에 붙임 → ③ 2개월 뒤 정확도 80%로 떨어졌다는 항의 → ④ 왜 떨어졌는지, 학습 데이터·코드가 어디 있는지도 모름 → ⑤ 처음부터 다시 6개월. MLOps는 이 악순환을 끊습니다.
+</div>
+<table>
+  <tr><th>항목</th><th>일반 ML (한 번 만들고 끝)</th><th>MLOps</th></tr>
+  <tr><td>배포</td><td class="bad">엑셀·리포트로 결과 전달</td><td class="good">실시간 추론으로 자동 서빙</td></tr>
+  <tr><td>성능 하락 감지</td><td class="bad">현장 컴플레인이 와야 비로소 인지</td><td class="good">SPC + PSI로 24시간 자동 감시</td></tr>
+  <tr><td>재학습</td><td class="bad">사람이 처음부터 다시 (수 주 소요)</td><td class="good">드리프트 감지 → 자동 재학습 → 자동 배포</td></tr>
+</table>
+
+<!-- 3 -->
+<h2>3. 해결: 이중 레이어 아키텍처</h2>
+<p>핵심 아이디어는 <b>성격이 정반대인 두 감시기를 위아래로 쌓는 것</b>입니다.</p>
+<div class="easy">
+  <div class="et">두 명의 검사관을 세우는 것 — 빠른 신입 + 꼼꼼한 베테랑</div>
+  <b>Layer 1 (SPC)</b>은 빠르지만 단순한 신입 검사관입니다. "뭔가 평소랑 다른데요?"를 즉시 외칩니다. 정답표가 없어도 작동합니다.<br>
+  <b>Layer 2 (RF)</b>은 느리지만 똑똑한 베테랑입니다. 신입이 부르면 와서 "이건 과부하 고장입니다, 이유는 토크가…"라고 정밀 진단합니다.<br>
+  둘을 함께 쓰면 <b>"빠른 감지"와 "정확한 진단"</b>을 동시에 얻습니다.
+</div>
+
+<div class="arch">
+  <div style="text-align:center"><b>📡 센서 스트림</b> <span class="tag">(AI4I 2020 데이터를 한 줄씩 흘려보냄)</span></div>
+  <div class="arrow">▼</div>
+  <div class="box l1">
+    <b>Layer 1 — SPC 관리도 (Shewhart 3σ)</b> <span class="tag">실시간 1차 감시</span><br>
+    5개 센서 각각을 감시하다가 "정상 범위 띠"를 벗어나면 즉시 알람.
+    <span class="tag">정답표(라벨) 불필요 · 누구나 이해 가능 · 신규 상황에 강함</span>
+  </div>
+  <div class="arrow">│ "뭔가 이상" 플래그</div>
+  <div class="box l2">
+    <b>Layer 2 — Random Forest 다중분류</b> <span class="tag">2차 정밀 진단</span><br>
+    플래그된 순간이 5개 고장 중 무엇인지 분류하고, "왜 그렇게 판단했는지"까지 설명.
+  </div>
+  <div class="arrow">▼</div>
+  <div class="box mon">
+    <b>두 레이어 결과를 교차 검증</b> <span class="tag">서로를 감시</span><br>
+    SPC는 "이상"이라는데 RF는 "정상/모르겠음"이면 → RF가 본 적 없는 새 패턴 의심
+  </div>
+  <div class="arrow">▼</div>
+  <div class="box auto">
+    <b>자동 재학습 트리거</b> <span class="tag">드리프트가 감지되면</span><br>
+    최근 데이터로 모델을 다시 학습 → 검증 → 교체 (사람 개입 최소)
+  </div>
+</div>
+
+<!-- 4 -->
+<h2>4. Layer 1 — SPC 관리도 (Shewhart 3σ)</h2>
+<p class="big-q">Q. SPC 관리도가 도대체 뭔가요?</p>
+<p><b>SPC(Statistical Process Control, 통계적 공정관리)</b>는 제조 현장에서 100년 가까이 쓰여온 품질관리 도구입니다. 그중 <b>관리도(control chart)</b>는 측정값을 시간 순으로 찍고, <b>"정상 범위 띠"</b>를 그려서 값이 그 띠를 벗어나는지 보는 그래프입니다.</p>
+<div class="easy">
+  <div class="et">관리도 = 병원 심박수 모니터의 "정상 범위 띠"</div>
+  심박수 모니터를 떠올리세요. 화면에 심박수 선이 그려지고, "정상 범위"가 띠로 표시됩니다. 선이 그 띠를 위로/아래로 뚫고 나가면 삑삑 경보가 울리죠. SPC 관리도가 바로 이겁니다. 센서 값이 정상 범위 띠를 벗어나면 "이상!" 경보를 냅니다.
+</div>
+
+<p class="big-q">Q. "정상 범위 띠"는 어떻게 정하나요? (평균 ± 3σ)</p>
+<p>정상적으로 가동되던 기간(기준기간)의 데이터를 모아서, 센서마다 <b>평균(중심선)</b>과 <b>표준편차(σ, 시그마)</b>를 계산합니다.</p>
+<div class="easy">
+  <div class="et">σ(시그마) = "평소에 위아래로 얼마나 흔들리는지의 폭"</div>
+  예를 들어 토크가 평소 40 근처에서 위아래로 약 10씩 흔들린다면, σ는 대략 10입니다. σ가 작으면 값이 안정적이고, 크면 들쭉날쭉하다는 뜻입니다.
+</div>
+<ul>
+  <li>중심선 = 평균 μ</li>
+  <li>관리상한 <b>UCL = μ + 3σ</b> (정상 흔들림의 3배 위)</li>
+  <li>관리하한 <b>LCL = μ − 3σ</b> (정상 흔들림의 3배 아래)</li>
+</ul>
+<div class="note">
+  <b>왜 하필 3배(3σ)인가?</b> 통계적으로, 정상 공정이라면 측정값의 <b>약 99.7%가 평균±3σ 안</b>에 들어옵니다. 즉 이 띠를 벗어날 확률은 0.3%도 안 됩니다. 그래서 "띠를 벗어났다"는 건 우연이 아니라 <b>"정말 평소와 다른 일이 벌어지고 있다"</b>는 강한 신호입니다. 덕분에 헛경보(오탐)가 매우 적습니다.
+</div>
+
+<p class="big-q">Q. 왜 SPC는 정답표(라벨)가 없어도 작동하나요?</p>
+<p>SPC는 "이게 무슨 고장인지" 알 필요가 없습니다. 그냥 <b>"정상일 때의 평소 범위"</b>만 알면 됩니다. 그 범위를 벗어나면 "평소와 다름"이라고 외치는 것뿐이죠. 그래서 <b>고장 사례 데이터가 거의 없어도, 처음 보는 새로운 고장이라도</b> 감지할 수 있습니다.</p>
+
+<h4>SPC가 맡는 두 가지 역할 (이게 이 설계의 묘미)</h4>
+<table>
+  <tr><th>역할</th><th>설명</th></tr>
+  <tr><td><b>① 실시간 이상 감지</b></td><td>라벨 없이 즉시 "평소와 다르다"를 포착. RF(베테랑)가 아직 안 깨어 있어도, 처음 보는 상황에서도 작동.</td></tr>
+  <tr><td><b>② ML 모델의 드리프트 감시</b></td><td>센서 값이 정상 범위 띠를 점점 자주 벗어나기 시작한다면, 그건 <b>"정상의 모습 자체가 변하고 있다"</b>는 신호 = 드리프트. 즉 <b>SPC가 곧 모델의 노화를 감시하는 경보기</b> 역할을 겸합니다.</td></tr>
+</table>
+<div class="easy">
+  <div class="et">SPC는 "고장 감지기"이면서 동시에 "모델 건강 감시기"</div>
+  같은 도구가 두 가지 일을 합니다. 평소엔 고장을 잡고, 한편으로는 "요즘 이상 신호가 부쩍 늘었네? 모델이 슬슬 안 맞기 시작했나 보다"라는 신호도 줍니다.
+</div>
+
+<!-- 5 -->
+<h2>5. Layer 2 — Random Forest 다중분류</h2>
+<p class="big-q">Q. Random Forest가 뭔가요?</p>
+<p>Random Forest(랜덤 포레스트)는 <b>수백 그루의 "결정나무"를 만들어 다수결로 판단</b>하는 머신러닝 모델입니다.</p>
+<div class="easy">
+  <div class="et">결정나무 = "스무고개", 랜덤 포레스트 = "전문가 수백 명의 다수결"</div>
+  <b>결정나무</b>는 스무고개입니다. "토크가 55보다 큰가? → 예 → 공구마모가 200분 넘나? → 아니오 → …" 이렇게 질문을 따라가며 결론에 도달하죠.<br>
+  <b>랜덤 포레스트</b>는 이런 스무고개 전문가를 수백 명 만들어 각자 판단하게 한 뒤 <b>다수결</b>로 최종 결정합니다. 한 명의 판단보다 수백 명의 다수결이 훨씬 안정적이고 정확합니다.
+</div>
+
+<h4>무엇을 분류하나 — 5개 고장 모드 + 정상</h4>
+<p>RF는 센서 값을 보고 다음 6가지 중 하나로 판정합니다 (정상 + 5개 고장). 각 고장의 물리적 원인은 데이터셋 공식 문서에 규칙으로 정의돼 있습니다:</p>
+<table>
+  <tr><th>코드</th><th>고장 모드</th><th>물리적 원인 (쉬운 설명)</th></tr>
+  <tr><td>TWF</td><td>공구마모 고장</td><td>칼날(공구)이 너무 닳아서(200~240분) 발생</td></tr>
+  <tr><td>HDF</td><td>열발산 고장</td><td>열이 잘 안 빠짐 — 공정온도와 공기온도 차이가 8.6도 미만이고 회전이 느릴 때(1380rpm 미만)</td></tr>
+  <tr><td>PWF</td><td>전력 고장</td><td>일률(토크×회전)이 너무 낮거나(3500W↓) 너무 높을 때(9000W↑)</td></tr>
+  <tr><td>OSF</td><td>과부하 고장</td><td>닳은 공구로 무리하게 힘을 줄 때 — 공구마모×토크가 임계값 초과</td></tr>
+  <tr><td>RNF</td><td>무작위 고장</td><td>특별한 이유 없이 0.1% 확률로 무작위 발생</td></tr>
+</table>
+
+<h4>모델에 넣는 입력 (특징)</h4>
+<ul>
+  <li>제품 타입(L/M/H, 품질 등급) + 5개 센서 원값</li>
+  <li><b>파생 특징</b>: <code>temp_diff = 공정온도 − 공기온도</code>(열이 잘 빠지는지), <code>power = 토크 × 회전속도</code>(일률). 위 물리 규칙에 직접 등장하는 값이라, 미리 계산해 넣어주면 모델이 훨씬 쉽게 배웁니다.</li>
+</ul>
+<div class="easy">
+  <div class="et">파생 특징 = "힌트를 미리 계산해서 주는 것"</div>
+  모델에게 온도 두 개를 따로 주는 것보다, "둘의 차이"를 미리 계산해서 주면 "아, 이 차이가 작을 때 열발산 고장이 나는구나"를 훨씬 빨리 배웁니다. 사람한테 문제 풀 때 핵심 힌트를 짚어주는 것과 같죠.
+</div>
+
+<h4>설계 포인트</h4>
+<ul>
+  <li><b>클래스 불균형</b>: 전체 1만 건 중 고장은 339건(3.4%)뿐이고, 그중 RNF는 19건, TWF는 46건으로 매우 드뭅니다. 이렇게 한쪽이 압도적으로 많으면 모델이 "전부 정상"이라고만 찍어도 96% 맞는 착시가 생깁니다. → <code>class_weight="balanced"</code>로 <b>희소한 고장에 더 큰 가중치</b>를 줘서 보정합니다.</li>
+  <li><b>설명가능성</b>: <em class="t">feature importance</em>(어떤 센서를 판단에 많이 썼는지 순위)로 "이 고장은 토크·공구마모 때문"이라고 정비팀에 근거를 제시합니다.</li>
+</ul>
+<div class="easy">
+  <div class="et">클래스 불균형 = "거의 다 정상"이라 생기는 함정</div>
+  100명 중 고장이 3명뿐이면, 모델이 게으르게 "전부 정상"이라고 답해도 정확도 97%로 보입니다. 하지만 정작 중요한 고장 3명을 다 놓친 거죠. 그래서 드문 고장을 일부러 더 중요하게 학습시킵니다.
+</div>
+
+<!-- 6 -->
+<h2>6. 이중 레이어의 핵심 — 두 레이어가 서로 검증</h2>
+<p>SPC(빠른 신입)와 RF(꼼꼼한 베테랑)의 결과를 <b>교차</b>하면 4가지 상황이 나옵니다. 각각 다르게 대응하는데, <b>특히 "SPC는 이상인데 RF는 정상"인 칸이 드리프트를 잡아내는 황금 신호</b>입니다.</p>
+
+<div class="matrix">
+  <div class="cell ok">
+    <div class="ct">SPC 정상 · RF 정상</div>
+    둘 다 괜찮다 → 정상 가동. 아무 조치 없음.
+  </div>
+  <div class="cell diag">
+    <div class="ct">SPC 이상 · RF 고장 (확신 높음)</div>
+    신입이 "이상!"을 외치고 베테랑도 "맞아, 과부하 고장이야"라고 동의 → 진단 확정, 정비팀에 어떤 고장인지까지 즉시 통보.
+  </div>
+  <div class="cell alert">
+    <div class="ct">SPC 정상 · RF 고장</div>
+    아직 정상 범위 띠는 안 벗어났지만 베테랑이 미세한 전조를 포착 → 예의주시 + 사람이 한 번 확인.
+  </div>
+  <div class="cell miss">
+    <div class="ct">★ SPC 이상 · RF 정상/모르겠음</div>
+    신입은 "이상!"인데 베테랑이 "글쎄… 처음 보는데"라고 함 → <b>RF가 학습한 적 없는 새 패턴</b> 의심 = 드리프트 → 사람 검토 + <b>재학습 트리거</b>.
+  </div>
+</div>
+
+<div class="loop">
+  <b>왜 이게 강력한가</b><br>
+  빠르지만 단순한 SPC가 "뭔가 이상"을 먼저 외치고, 정밀하지만 과거 데이터에 갇힌 RF가 "나는 모르겠다"고 하면 → 그 <b>간극이 곧 모델이 따라잡아야 할 새로운 현실</b>입니다. 즉 <b>SPC가 RF의 감시자</b>가 되어, 모델이 아무도 모르게 조용히 늙어가는 것을 막아줍니다. 한 감시기가 다른 감시기의 노화를 잡아주는 구조 — 이게 "이중 레이어"의 진짜 가치입니다.
+</div>
+
+<!-- 7 -->
+<h2>7. MLOps 전체 루프 (5개 레이어)</h2>
+<p>MLOps 교과서에서는 시스템을 보통 5개 레이어로 나눕니다. 우리 시스템을 그 틀에 맞춰보면:</p>
+<div class="layers">
+  <div class="layer"><b>Data</b>센서 데이터를 모아 정리하는 단계. 학습할 때와 실제 돌릴 때 <b>똑같은 방식</b>으로 가공해야 함(temp_diff, power 같은 파생값 포함). 이걸 위한 공용 창고가 <em class="t">Feature Store</em>.</div>
+  <div class="layer"><b>Model</b>Random Forest를 학습하고, 버전(v1, v2…)을 붙여 보관. 나중에 "그때 그 모델"을 그대로 재현할 수 있어야 함.</div>
+  <div class="layer"><b>Serving</b>학습한 모델을 실제로 돌려서 예측을 내놓는 단계. 여기선 센서 데이터를 한 줄씩 받아 실시간 추론.</div>
+  <div class="layer"><b>Monitoring</b>모델이 잘 작동하는지 감시. 우리는 <b>SPC(즉시 이상 감지)</b> + <b>PSI(분포 변화 감지)</b> 두 가지로 이중 감시.</div>
+  <div class="layer"><b>Automation</b>위 감시에서 드리프트가 잡히면, 사람 손 없이 <b>자동으로 재학습 → 검증 → 배포 → (실패 시) 되돌리기</b>까지 굴러가게 하는 자동화.</div>
+</div>
+
+<p class="big-q">Q. PSI가 뭔가요? (드리프트를 숫자로 재는 자)</p>
+<div class="easy">
+  <div class="et">PSI = "예전 분포 vs 지금 분포가 얼마나 달라졌나"를 한 숫자로</div>
+  예전에 찍은 단체사진과 지금 찍은 단체사진을 겹쳐서 "얼마나 달라졌나"를 점수 하나로 매기는 것과 비슷합니다.
+  <b>PSI &lt; 0.1</b>이면 거의 그대로(안정), <b>0.1~0.2</b>면 주의, <b>0.2 이상</b>이면 "확실히 달라졌다"(드리프트)로 봅니다. 우리는 0.2를 재학습 신호로 씁니다.
+</div>
+
+<h4>자동 재학습 흐름</h4>
+<ol>
+  <li>드리프트 구간 진입 → 토크 값 분포가 기준기간과 달라지기 시작</li>
+  <li>최근 데이터로 계산한 <em class="t">PSI</em>가 0.2를 넘음 → "달라졌다!" 확정</li>
+  <li>재학습 트리거 발동 → 최근 데이터로 새 모델(RF v2) 학습</li>
+  <li>새 모델 v2를 기존 v1과 비교 검증 → 더 좋으면 교체, 나쁘면 v1 유지(되돌리기)</li>
+  <li>"만약 재학습을 안 했다면?" 가상의 결과와 나란히 비교 → 재학습이 실제로 얼마나 도움 됐는지 입증</li>
+</ol>
+
+<!-- 8 -->
+<h2>8. 데이터셋 &amp; 드리프트 시나리오</h2>
+<h3>UCI AI4I 2020 Predictive Maintenance</h3>
+<p>이 프로젝트는 누구나 받을 수 있는 공개 데이터셋을 씁니다.</p>
+<ul>
+  <li>10,000건 · 5개 센서 · 5개 고장 모드 · 제품 타입 L/M/H</li>
+  <li>전체 고장률 3.4%(339건) — 현실처럼 고장이 드문 불균형 데이터. 고장모드별: HDF 115 · OSF 98 · PWF 95 · TWF 46 · RNF 19</li>
+  <li><b>물리 규칙으로 라벨 100% 재현 검증됨</b> — 공식 문서에 적힌 고장 규칙(예: "온도차 8.6도 미만이면 열발산 고장")을 그대로 계산했더니 원본 정답과 완벽히 일치(115/115, 95/95, 98/98). 그래서 우리가 데이터를 인위적으로 바꿔도 라벨을 정직하게 다시 매길 수 있습니다.</li>
+</ul>
+<div class="easy">
+  <div class="et">왜 "라벨 100% 재현"이 중요한가</div>
+  드리프트를 시연하려면 데이터에 인위적으로 변화를 줘야 하는데(아래 참고), 그때 "고장 여부"도 물리 법칙에 맞게 다시 매겨야 정직합니다. 규칙이 원본을 100% 재현한다는 건, 우리가 만든 드리프트 시나리오가 <b>물리적으로 말이 된다</b>는 보증입니다. 발표 때 "그거 조작 아니냐"는 질문에 떳떳합니다.
+</div>
+
+<h3>드리프트 시나리오 — "베어링이 닳아 부하가 점점 커진다"</h3>
+<p>이 데이터는 원래 시간 흐름에 따른 변화가 없습니다. 그래서 <b>현실적인 드리프트 상황을 직접 만들어</b> 시연합니다.</p>
+<table>
+  <tr><th>구간</th><th>행</th><th>무슨 일이 일어나나</th></tr>
+  <tr><td>기준기간(baseline)</td><td>0 ~ 3,000</td><td>정상 가동. 이 데이터로 SPC 정상범위 띠 + RF v1 + PSI 기준을 만듦</td></tr>
+  <tr><td>안정 가동(stable)</td><td>3,000 ~ 6,000</td><td>여전히 정상. 모델이 잘 맞음</td></tr>
+  <tr><td>드리프트(drift)</td><td>6,000 ~ 10,000</td><td>토크를 조금씩 올림(최대 +16Nm). 베어링이 닳아 점점 힘이 더 드는 상황을 흉내. 바뀐 토크로 고장 여부도 물리 규칙대로 다시 계산</td></tr>
+</table>
+<div class="note">
+  <b>연쇄 반응 (이게 시연의 하이라이트)</b><br>
+  토크가 올라가면 → ① SPC 토크 관리도에서 정상범위 띠를 벗어나는 빨간 점이 급증 + ② PSI(토크)가 0.2를 넘음 → ③ 실제로 과부하(OSF)·전력(PWF) 고장이 늘어남 → ④ 옛 데이터로 학습한 RF v1이 이 새 상황을 놓치기 시작(성능 하락) → ⑤ 드리프트가 감지되어 재학습 트리거 → RF v2 → ⑥ 성능 회복. <b>"감지 → 진단 → 자동 회복"의 전 과정을 한눈에 보여줍니다.</b>
+</div>
+
+<!-- 9 -->
+<h2>9. 기대 효과</h2>
+<h4>정량 (before / after) — 구현 후 실제 수치로 채움</h4>
+<table>
+  <tr><th>지표</th><th>재학습 안 함 (반례)</th><th>이중 레이어 + 재학습</th></tr>
+  <tr><td>드리프트 구간 고장 탐지율(recall)</td><td class="bad">급락</td><td class="good">회복</td></tr>
+  <tr><td>드리프트 구간 종합 성능(macro-F1)</td><td class="bad">하락</td><td class="good">유지</td></tr>
+  <tr><td>고장 원인 진단</td><td class="bad">사람이 설비를 분해해 확인</td><td class="good">5개 모드 자동 분류 + 근거 제시</td></tr>
+  <tr><td>드리프트 인지</td><td class="bad">현장 컴플레인이 와야 인지</td><td class="good">SPC+PSI로 실시간 자동 감지</td></tr>
+</table>
+<div class="easy">
+  <div class="et">recall(탐지율) = "실제 고장 중 몇 개를 잡았나"</div>
+  실제 고장이 100건 있었는데 모델이 80건을 고장이라 잡았으면 recall은 80%. 예지보전에서는 고장을 놓치는 게 가장 치명적이라, 정확도보다 이 탐지율이 더 중요합니다.
+</div>
+
+<h4>정성 — 현장이 얻는 것</h4>
+<ul>
+  <li><b>감지 + 진단 + 자기유지</b>를 한 시스템이 동시에 수행</li>
+  <li>단순 임계값 대비 복합 고장을 조기 포착하고, 헛경보(오탐)는 줄임</li>
+  <li>드리프트에 자동 대응 → 사람이 모델을 계속 손보지 않아도 됨</li>
+  <li>SPC라는, 현장이 이미 잘 아는 친숙하고 해석 가능한 도구가 1차 방어선 → 도입 저항이 낮음</li>
+</ul>
+
+<div class="cf">
+  <h4>🔥 만약 이 시스템이 없다면</h4>
+  <ul>
+    <li><b>SPC가 없으면</b> → RF가 처음 보는 패턴을 만나도 조용히 틀린 답을 내놓고, 아무도 눈치채지 못함</li>
+    <li><b>RF가 없으면</b> → "이상"은 알아도 "무슨 고장"인지 몰라 정비팀이 매번 설비를 뜯어야 함</li>
+    <li><b>드리프트 감지/재학습이 없으면</b> → 베어링 마모가 진행될수록 모델 성능이 계속 떨어지다가, 결국 큰 고장을 놓쳐 비계획 다운타임 발생</li>
+  </ul>
+</div>
+
+<div class="footer">
+  v2 (입문자용 친절·심화) · 2026-05-28 · 설비 고장 모드 분류 + SPC 이중 레이어 MLOps
+</div>
+
+</body>
+</html>
