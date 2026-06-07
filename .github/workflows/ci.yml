@@ -27,5 +27,8 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
+      - name: Generate model registry (CLI smoke + enables API tests)
+        run: python scripts/run_pipeline.py
+
       - name: Test (pytest)
         run: pytest
