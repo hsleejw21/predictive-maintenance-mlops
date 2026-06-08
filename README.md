@@ -6,6 +6,20 @@ UCI **AI4I 2020 Predictive Maintenance** 데이터로,
 
 ---
 
+## 데모 화면
+
+| 실시간 SPC 모니터링 | 고장 진단 (Random Forest) |
+|---|---|
+| ![SPC 드리프트 감지](presentation/shots/02_spc_drift.png) | ![RF 고장 진단](presentation/shots/03_rf_diagnosis.png) |
+| 5개 센서 관리도(±3σ)·OOC 알람. 드리프트 구간에서 토크 이탈↑ | 고장 모드 분류 + 특징 중요도(진단 근거) + 모드별 탐지율 |
+
+| 드리프트 · 자동 재학습 | 비즈니스 가치 |
+|---|---|
+| ![드리프트·재학습](presentation/shots/04_drift_retrain.png) | ![비즈니스 가치](presentation/shots/05_business.png) |
+| PSI 임계 돌파 → 재학습 → recall 회복(운영 vs 미재학습) | 재학습 전/후 정량 효과 + 일반 ML 대비 비교 |
+
+---
+
 ## 파일 구성
 
 코드는 **5개 MLOps 레이어**(Data / Model / Serving / Monitoring / Automation)에 1:1로 매핑되는
@@ -23,7 +37,6 @@ UCI **AI4I 2020 Predictive Maintenance** 데이터로,
 | `src/pdm/tracking/` | **Tracking** — MLflow 실험 추적(옵션·비침습, `mlflow_logger.py`) |
 | `app.py` | **실시간 대시보드**(Streamlit) — 4탭: SPC / RF 진단 / 드리프트·재학습 / 비즈니스 가치 |
 | `scripts/run_pipeline.py` | **CLI** — 시뮬레이션 실행 + 모델 영속화 + 진단 요약(streamlit 불필요) |
-| `pipeline.py` | 하위호환 파사드(`from pdm import *`) — 기존 `import pipeline` 코드용 |
 | `tests/` | **pytest 스위트** — 물리규칙·피처·모니터링·자동화·레지스트리·API + 회귀(불변값) |
 | `.github/workflows/ci.yml` | **CI** — push/PR마다 ruff 린트 + pytest + Docker 빌드 (Python 3.10/3.11) |
 | `Dockerfile` · `docker-compose.yml` | **컨테이너** — 핀 고정 의존성 + 모델 내장, `docker compose up` 으로 대시보드+API |
@@ -32,7 +45,7 @@ UCI **AI4I 2020 Predictive Maintenance** 데이터로,
 | `data/ai4i2020.csv` | 데이터셋 (10,000건 · 5센서 · 5고장모드) |
 | `docs/architecture.md` | **아키텍처·모듈 참고자료** |
 | `scenario_design.html` | 시나리오 설계 문서 (입문자용, 브라우저로 열기) |
-| `presentation/` | 발표 자료 모음 — `build_ppt.py`·`capture.py`·`*.pptx`(16장)·`shots/`(캡처) |
+| `presentation/` | 발표 자료 — `shots/`(대시보드 캡처) + 재생성 스크립트(`build_ppt.py`·`capture.py`). PPTX는 생성물(.gitignore) |
 
 ---
 
